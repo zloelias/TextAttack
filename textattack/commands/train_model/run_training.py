@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 
@@ -31,7 +32,11 @@ def train_model(args):
     load_time = time.time()
     logger.info(f"Loaded data and tokenized in {load_time-start_time}s")
     
-    logger.info('Training data with HuggingFace Trainer.')
+    logger.info('Training model with HuggingFace Trainer.')
+    
+    # Turn logging level up so that we can see output of transformers training
+    # scripts.
+    logging.basicConfig(level=logging.INFO)
     
     #  create HF Trainer
     trainer = transformers.Trainer(

@@ -132,18 +132,14 @@ def model_from_args(args, num_labels):
             config=config,
         )
         tokenizer = textattack.models.tokenizers.AutoTokenizer(
-            args.model, use_fast=False, max_length=args.max_length
+            args.model, 
+            use_fast=False, 
+            max_length=args.max_length,
         )
         setattr(model, "tokenizer", tokenizer)
 
     model = model.to(textattack.shared.utils.device)
     tokenizer = model.tokenizer
-
-    # multi-gpu training
-    num_gpus = torch.cuda.device_count()
-    if num_gpus > 1:
-        model = torch.nn.DataParallel(model)
-    logger.info(f"Training model across {num_gpus} GPUs")
 
     return model, tokenizer
 
@@ -156,6 +152,8 @@ def create_dataset(tokenizer, text, labels):
 
     logger.info(f"Tokenizing data (len: {len(text)})")
     encoded_text = encode_batch(tokenizer, text)
-    data = [{**encoding, 'label_ids': label} for encoding, label in zip(encoded_text, labels)]
+    data = [{**encoding, 'label_ids': [label]} for encoding, label in zip(encoded_text, labels)]
+    # for dict_obj in data:
+        # dict_obj['__dict__'] = dict_obj
     return data
     # return torch.utils.data.dataset.Dataset(data)

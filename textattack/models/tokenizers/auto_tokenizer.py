@@ -22,12 +22,20 @@ class AutoTokenizer(Tokenizer):
         name="bert-base-uncased",
         max_length=256,
         pad_to_length=False,
+        do_lower_case=False,
+        config=None,
         use_fast=True,
     ):
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            name, use_fast=use_fast
-        )
-        self.max_length = max_length
+        self.save_pretrained = self.tokenizer.save_pretrained
+        
+        if config:
+            
+        else:
+            
+            self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+                name, use_fast=use_fast
+            )
+            self.max_length = max_length
 
     def encode(self, input_text):
         """ Encodes ``input_text``.
@@ -41,6 +49,7 @@ class AutoTokenizer(Tokenizer):
             max_length=self.max_length,
             add_special_tokens=True,
             pad_to_max_length=True,
+            truncation=True
         )
         return dict(encoded_text)
 

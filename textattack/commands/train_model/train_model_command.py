@@ -63,10 +63,6 @@ class TrainModelCommand(TextAttackCommand):
 
     def run(self, args):
         args = self._process_args(args)
-        
-        print(dir(args))
-        print(vars(args))
-        # import pdb; pdb.set_trace()
 
         train_model(args)
 
