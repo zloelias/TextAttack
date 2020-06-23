@@ -15,24 +15,8 @@ def make_directories(output_dir):
 
 
 def train_model(args):
-    args.device = textattack.shared.utils.device
-    args.local_rank = -1 # Don't support distributed training (yet)
-    args.logging_dir = args.output_dir # Write logs to same directory model gets saved to (TODO is this the best choice?)
-
     start_time = time.time()
     make_directories(args.output_dir)
-
-    # Start Tensorboard and log hyperparams.
-    # from tensorboardX import SummaryWriter
-
-    # tb_writer = SummaryWriter(args.output_dir)
-    # args_dict = vars(args)
-    # del args_dict["func"]
-    # tb_writer.add_hparams(args_dict, {})
-
-    # Use Weights & Biases, if enabled.
-    # if args.enable_wandb:
-        # wandb.init(sync_tensorboard=True)
 
     # Get list of text and list of label (integers) from disk.
     (train_text, train_labels), (eval_text, eval_labels), num_labels = data_from_args(args)

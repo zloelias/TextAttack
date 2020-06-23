@@ -4,8 +4,11 @@
 # compiled python files
 __pycache__/
 
-# run logs
+# attack logs
 outputs/
+
+# train logs
+runs/
 
 # IDE files
 .c9*
