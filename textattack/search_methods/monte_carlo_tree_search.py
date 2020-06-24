@@ -378,15 +378,15 @@ class MonteCarloTreeSearch(SearchMethod):
 
     def _perform_search(self, initial_result):
         max_tree_depth = min(
-            self.max_tree_depth, len(initial_result.tokenized_text.words)
+            self.max_tree_depth, len(initial_result.attacked_text.words)
         )
         max_words_changed = min(
-            self.max_words_changed, len(initial_result.tokenized_text.words)
+            self.max_words_changed, len(initial_result.attacked_text.words)
         )
         num_rollouts = self.num_rollouts
 
         self.search_tree = SearchTree(
-            initial_result.tokenized_text, initial_result.output, max_tree_depth
+            initial_result.attacked_text, initial_result.output, max_tree_depth
         )
         current_result = initial_result
         words_changed = 0

@@ -115,11 +115,11 @@ class MetropolisHastingsSampling(SearchMethod):
             return [v / s for v in values]
 
     def _perform_search(self, initial_result):
-        text_len = len(initial_result.tokenized_text.words)
+        text_len = len(initial_result.attacked_text.words)
         max_iter = max(self.max_iter, text_len)
 
         current_result = initial_result
-        current_text = initial_result.tokenized_text
+        current_text = initial_result.attacked_text
         current_score = self._stationary_dist(current_text, initial_result.output)
 
         for n in range(max_iter):
@@ -129,7 +129,7 @@ class MetropolisHastingsSampling(SearchMethod):
             transformations = self.get_transformations(
                 current_text,
                 indices_to_modify=[i],
-                original_text=initial_result.tokenized_text,
+                original_text=initial_result.attacked_text,
             )
 
             if len(transformations) == 0:
@@ -146,7 +146,7 @@ class MetropolisHastingsSampling(SearchMethod):
             reverse_transformations = self.get_transformations(
                 transformations[jump],
                 indices_to_modify=[i],
-                original_text=initial_result.tokenized_text,
+                original_text=initial_result.attacked_text,
             )
 
             reverse_jump = None
