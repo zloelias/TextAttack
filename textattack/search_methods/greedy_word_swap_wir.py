@@ -7,8 +7,6 @@ See https://arxiv.org/abs/1907.11932 and https://github.com/jind11/TextFooler.
 """
 
 
-import random
-
 import numpy as np
 
 from textattack.search_methods import SearchMethod
