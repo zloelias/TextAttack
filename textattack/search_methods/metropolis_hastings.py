@@ -34,7 +34,7 @@ class MetropolisHastingsSampling(SearchMethod):
             # Try to use GPU, but sometimes we might have out-of-memory issue
             # Having the below line prevents CUBLAS error when we try to switch to CPU
             torch.cuda.current_blas_handle()
-            self._lm_device = utils.get_device()
+            self._lm_device = utils.device
             self._language_model = self._language_model.to(self._lm_device)
         except RuntimeError as error:
             if "CUDA out of memory" in str(error):
