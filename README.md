@@ -10,8 +10,8 @@
   <a href="#usage">Usage</a> •
   <a href="#design">Design</a> 
   <br> <br>
-  <a target="_blank" href="https://travis-ci.org/QData/TextAttack">
-    <img src="https://travis-ci.org/QData/TextAttack.svg?branch=master" alt="Coverage Status">
+  <a target="_blank">
+    <img src="https://github.com/QData/TextAttack/workflows/Github%20PyTest/badge.svg" alt="Github Runner Covergae Status">
   </a>
   <a href="https://badge.fury.io/py/textattack">
     <img src="https://badge.fury.io/py/textattack.svg" alt="PyPI version" height="18">
