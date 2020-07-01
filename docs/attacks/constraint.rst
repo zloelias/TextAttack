@@ -83,6 +83,12 @@ GPT-2
 
 .. automodule:: textattack.constraints.grammaticality.language_models.gpt2
    :members:
+   
+"Learning To Write" Language Model
+*******
+
+.. automodule:: textattack.constraints.grammaticality.language_models.learning_to_write.learning_to_write
+   :members:
 
 
 Google 1-Billion Words Language Model
@@ -156,6 +162,20 @@ Stopword Modification
 .. automodule:: textattack.constraints.pre_transformation.stopword_modification
    :members:
    
+Repeat Modification
+########################
+.. automodule:: textattack.constraints.pre_transformation.repeat_modification
+   :members:
+
+Input Column Modification
+#############################
+.. automodule:: textattack.constraints.pre_transformation.input_column_modification
+   :members: 
+ 
+Repeat Modification
+########################
+.. automodule:: textattack.constraints.pre_transformation.repeat_modification
+   :members:
 Repeat Modification
 ########################
 .. automodule:: textattack.constraints.pre_transformation.repeat_modification
