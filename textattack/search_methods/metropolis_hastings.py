@@ -32,7 +32,7 @@ class MetropolisHastingsSampling(SearchMethod):
             Currently supported LM is "gpt2"
     """
 
-    def __init__(self, max_iter=20, pop_size=50, lm_type="gpt2"):
+    def __init__(self, max_iter=50, pop_size=20, lm_type="gpt2"):
         self.max_iter = max_iter
         self.pop_size = pop_size
         self.lm_type = lm_type
@@ -140,25 +140,6 @@ class MetropolisHastingsSampling(SearchMethod):
 
         return scores, goal_results
 
-    def _calc_return_prob(self, proposed_state, previous_state, index, initial_result):
-        # Now we have to calculate probability of return proposal g(x|x')
-        reverse_transformations = self.get_transformations(
-            proposed_state,
-            indices_to_modify=[index],
-            original_text=initial_result.attacked_text,
-        )
-
-        reverse_found = False
-        for t in reverse_transformations:
-            if t.text == previous_state.text:
-                reverse_found == True
-                break
-
-        if reverse_found:
-            return 1 / len(reverse_transformations)
-        else:
-            return 0.0
-
     def _perform_search(self, initial_result):
         text_len = len(initial_result.attacked_text.words)
         max_iter = max(self.max_iter, text_len)
@@ -202,43 +183,33 @@ class MetropolisHastingsSampling(SearchMethod):
                 if self._search_over:
                     break
 
-                proposal_prob = 1 / len(transformations)
-                # Select on transformation uniformly-random
-                jump = np.random.choice(list(range(len(target_scores))))
-                return_prob = self._calc_return_prob(
-                    transformations[jump],
-                    population[k].result.attacked_text,
-                    rand_idx,
-                    initial_result,
-                )
-
                 """
                 According to Metropolis-Hastings algorithm
                 let f(x) be value proportional to target distribution p(x)
-                and g(x|x') be transition probability from x' to x.
+                and g(x'|x) be transition probability from x to x'.
                 Then, acceptance ratio = min(1, (f(x')*g(x|x')) / (f(x) * g(x'|x)))
+                f(x) = LM(x) * C(y=t|x) and g(x'|x) is simply 1. 
                 """
-                """
-                acceptance_score = (target_scores[jump] * return_prob) / (
-                    population[k].target_score * proposal_prob
-                )
-                """
-                acceptance_score = target_scores[jump] / population[k].target_score
-                acceptance_score = min(1, acceptance_score)
-                u = np.random.uniform(low=0.0, high=1.0)
-                if False:
-                    print(f"target_score: {target_scores[jump]}")
-                    print(f"return_prob: {return_prob}")
-                    print(f"prev_score: {population[k].target_score}")
-                    print(f"proposal_prob: {proposal_prob}")
-                if (
-                    acceptance_score >= u
-                    or goal_results[jump].goal_status
-                    == GoalFunctionResultStatus.SUCCEEDED
-                ):
-                    # Accept the proposed jump
-                    population[k].result = goal_results[jump]
-                    population[k].target_score = target_scores[jump]
+                candidates = list(range(len(transformations)))
+                while candidates:
+                    # Sample one candidate uniformly random
+                    idx = np.random.choice(candidates)
+
+                    acceptance_score = target_scores[idx] / population[k].target_score
+                    acceptance_score = min(1, acceptance_score)
+                    u = np.random.uniform(low=0.0, high=1.0)
+
+                    if (
+                        acceptance_score >= u
+                        or goal_results[idx].goal_status
+                        == GoalFunctionResultStatus.SUCCEEDED
+                    ):
+                        # Accept the proposed jump
+                        population[k].result = goal_results[idx]
+                        population[k].target_score = target_scores[idx]
+                        break
+                    else:
+                        candidates.remove(idx)
 
             if self._search_over:
                 break
