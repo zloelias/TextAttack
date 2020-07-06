@@ -106,7 +106,7 @@ class GeneticAlgorithm(SearchMethod):
         """
         x1_text = pop_member1.attacked_text
         x2_text = pop_member2.attacked_text
-        x2_words = pop_member2.attacked_text.words
+        x2_words = x2_text.words
 
         num_tries = 0
         passed_constraints = False
