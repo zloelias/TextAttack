@@ -68,11 +68,12 @@ def add_dataset_args(parser):
         default=None,
         help="Dataset to load from a file.",
     )
-    dataset_group.add_argument(
+    parser.add_argument(
         "--shuffle",
-        action="store_true",
+        type=eval,
         required=False,
-        default=False,
+        choices=[True, False],
+        default="True",
         help="Randomly shuffle the data before attacking",
     )
     parser.add_argument(
@@ -314,13 +315,19 @@ def parse_model_from_args(args):
                     f"Tried to load model from path {args.model} - could not find train_args.json."
                 )
             model_train_args = json.loads(open(model_args_json_path).read())
-            model_train_args["model"] = args.model
+            if model_train_args["model"] not in {"cnn", "lstm"}:
+                # for huggingface models, set args.model to the path of the model
+                model_train_args["model"] = args.model
             num_labels = model_train_args["num_labels"]
             from textattack.commands.train_model.train_args_helpers import (
                 model_from_args,
             )
 
-            model = model_from_args(argparse.Namespace(**model_train_args), num_labels)
+            model = model_from_args(
+                argparse.Namespace(**model_train_args),
+                num_labels,
+                model_path=args.model,
+            )
         else:
             raise ValueError(f"Error: unsupported TextAttack model {args.model}")
     return model
@@ -387,7 +394,7 @@ def parse_dataset_from_args(args):
                 dataset_args = dataset_args.split(":")
             else:
                 dataset_args = (dataset_args,)
-        dataset = textattack.datasets.HuggingFaceNLPDataset(
+        dataset = textattack.datasets.HuggingFaceNlpDataset(
             *dataset_args, shuffle=args.shuffle
         )
         dataset.examples = dataset.examples[args.num_examples_offset :]
@@ -422,7 +429,7 @@ def parse_logger_from_args(args):
         color_method = None if args.enable_csv == "plain" else "file"
         csv_path = os.path.join(args.out_dir, outfile_name)
         attack_log_manager.add_output_csv(csv_path, color_method)
-        print("Logging to CSV at path {}.".format(csv_path))
+        textattack.shared.logger.info(f"Logging to CSV at path {csv_path}.")
 
     # Visdom
     if args.enable_visdom:

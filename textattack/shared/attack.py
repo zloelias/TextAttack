@@ -65,8 +65,7 @@ class Attack:
         self.pre_transformation_constraints = []
         for constraint in constraints:
             if isinstance(
-                constraint,
-                textattack.constraints.pre_transformation.PreTransformationConstraint,
+                constraint, textattack.constraints.PreTransformationConstraint,
             ):
                 self.pre_transformation_constraints.append(constraint)
             else:
@@ -129,9 +128,15 @@ class Attack:
         for C in self.constraints:
             if len(filtered_texts) == 0:
                 break
-            filtered_texts = C.call_many(
-                filtered_texts, current_text, original_text=original_text
-            )
+            if C.compare_against_original:
+                if not original_text:
+                    raise ValueError(
+                        f"Missing `original_text` argument when constraint {type(C)} is set to compare against `original_text`"
+                    )
+
+                filtered_texts = C.call_many(filtered_texts, original_text)
+            else:
+                filtered_texts = C.call_many(filtered_texts, current_text)
         # Default to false for all original transformations.
         for original_transformed_text in transformed_texts:
             self.constraints_cache[(current_text, original_transformed_text)] = False
@@ -200,15 +205,16 @@ class Attack:
         Gets examples from a dataset and tokenizes them.
 
         Args:
-            dataset: An iterable of (text, ground_truth_output) pairs
+            dataset: An iterable of (text_input, ground_truth_output) pairs
             indices: An iterable of indices of the dataset that we want to attack. If None, attack all samples in dataset.
         
         Returns:
             results (Iterable[GoalFunctionResult]): an iterable of GoalFunctionResults of the original examples
         """
-        indices = indices if indices else deque(range(len(dataset)))
+        indices = indices or range(len(dataset))
         if not isinstance(indices, deque):
-            indices = deque(indices)
+            indices = deque(sorted(indices))
+
         if not indices:
             return
             yield
@@ -216,14 +222,14 @@ class Attack:
         while indices:
             i = indices.popleft()
             try:
-                text, ground_truth_output = dataset[i]
+                text_input, ground_truth_output = dataset[i]
                 try:
                     # get label names from dataset, if possible
                     label_names = dataset.label_names
                 except AttributeError:
                     label_names = None
                 attacked_text = AttackedText(
-                    text, attack_attrs={"label_names": label_names}
+                    text_input, attack_attrs={"label_names": label_names}
                 )
                 goal_function_result, _ = self.goal_function.init_attack_example(
                     attacked_text, ground_truth_output
@@ -231,9 +237,10 @@ class Attack:
                 yield goal_function_result
 
             except IndexError:
-                raise IndexError(
-                    f"Out of bounds access of dataset. Size of data is {len(dataset)} but tried to access index {i}"
+                utils.logger.warn(
+                    f"Dataset has {len(dataset)} samples but tried to access index {i}. Ending attack early."
                 )
+                break
 
     def attack_dataset(self, dataset, indices=None):
         """ 

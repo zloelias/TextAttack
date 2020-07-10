@@ -2,7 +2,7 @@ import random
 
 import tqdm
 
-from textattack.constraints.pre_transformation import PreTransformationConstraint
+from textattack.constraints import PreTransformationConstraint
 from textattack.shared import AttackedText
 
 
@@ -18,7 +18,7 @@ class Augmenter:
             that suggests new texts from an input.
         constraints: (list(textattack.Constraint)): constraints
             that each transformation must meet
-        num_words_to_swap: (int): Number of words to swap per augmented example
+        pct_words_to_swap: (float): [0., 1.], percentage of words to swap per augmented example
         transformations_per_example: (int): Maximum number of augmentations
             per input
     """
@@ -27,11 +27,17 @@ class Augmenter:
         self,
         transformation,
         constraints=[],
-        num_words_to_swap=1,
+        pct_words_to_swap=0.1,
         transformations_per_example=1,
     ):
+        assert (
+            transformations_per_example > 0
+        ), "transformations_per_example must be a positive integer"
+        assert (
+            pct_words_to_swap >= 0.0 and pct_words_to_swap <= 1.0
+        ), "pct_words_to_swap must be in [0., 1.]"
         self.transformation = transformation
-        self.num_words_to_swap = num_words_to_swap
+        self.pct_words_to_swap = pct_words_to_swap
         self.transformations_per_example = transformations_per_example
 
         self.constraints = []
@@ -50,9 +56,15 @@ class Augmenter:
         for C in self.constraints:
             if len(transformed_texts) == 0:
                 break
-            transformed_texts = C.call_many(
-                transformed_texts, current_text, original_text=original_text
-            )
+            if C.compare_against_original:
+                if not original_text:
+                    raise ValueError(
+                        f"Missing `original_text` argument when constraint {type(C)} is set to compare against `original_text`"
+                    )
+
+                transformed_texts = C.call_many(transformed_texts, original_text)
+            else:
+                transformed_texts = C.call_many(transformed_texts, current_text)
         return transformed_texts
 
     def augment(self, text):
@@ -63,6 +75,7 @@ class Augmenter:
         attacked_text = AttackedText(text)
         original_text = attacked_text
         all_transformed_texts = set()
+        num_words_to_swap = int(self.pct_words_to_swap * len(attacked_text.words))
         for _ in range(self.transformations_per_example):
             index_order = list(range(len(attacked_text.words)))
             random.shuffle(index_order)
@@ -84,7 +97,7 @@ class Augmenter:
                     continue
                 current_text = random.choice(transformed_texts)
                 words_swapped += 1
-                if words_swapped == self.num_words_to_swap:
+                if words_swapped == num_words_to_swap:
                     break
             all_transformed_texts.add(current_text)
         return sorted([at.printable_text() for at in all_transformed_texts])

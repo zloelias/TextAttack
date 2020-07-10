@@ -3,7 +3,6 @@ from textattack.constraints.grammaticality.language_models import (
 )
 from textattack.constraints.overlap import MaxWordsPerturbed
 from textattack.constraints.pre_transformation import (
-    InputColumnModification,
     RepeatModification,
     StopwordModification,
 )
@@ -14,61 +13,48 @@ from textattack.shared.attack import Attack
 from textattack.transformations import WordSwapEmbedding
 
 
-def GeneticAlgorithmAlzantot2018(model):
+def IGAWang2019(model):
     """
-        Alzantot, M., Sharma, Y., Elgohary, A., Ho, B., Srivastava, M.B., & Chang, K. (2018). 
+        Xiaosen Wang, Hao Jin, Kun He (2019). 
         
-        Generating Natural Language Adversarial Examples. 
+        Natural Language Adversarial Attack and Defense in Word Level. 
         
-        https://arxiv.org/abs/1801.00554 
+        http://arxiv.org/abs/1909.06723 
     """
     #
     # Swap words with their embedding nearest-neighbors.
-    #
     # Embedding: Counter-fitted Paragram Embeddings.
+    # Fix the hyperparameter value to N = Unrestricted (50)."
     #
-    # "[We] fix the hyperparameter values to S = 60, N = 8, K = 4, and δ = 0.5"
+    transformation = WordSwapEmbedding(max_candidates=50)
     #
-    transformation = WordSwapEmbedding(max_candidates=8)
+    # Don't modify the stopwords
     #
-    # Don't modify the same word twice or stopwords
-    #
-    constraints = [RepeatModification(), StopwordModification()]
-    #
-    # During entailment, we should only edit the hypothesis - keep the premise
-    # the same.
-    #
-    input_column_modification = InputColumnModification(
-        ["premise", "hypothesis"], {"premise"}
-    )
-    constraints.append(input_column_modification)
+    constraints = [StopwordModification()]
     #
     # Maximum words perturbed percentage of 20%
     #
     constraints.append(MaxWordsPerturbed(max_percent=0.2))
     #
-    # Maximum word embedding euclidean distance of 0.5.
+    # Maximum word embedding euclidean distance δ of 0.5.
     #
     constraints.append(
         WordEmbeddingDistance(max_mse_dist=0.5, compare_against_original=False)
-    )
-    #
-    # Language Model
-    #
-    constraints.append(
-        Google1BillionWordsLanguageModel(
-            top_n_per_index=4, compare_against_original=False
-        )
     )
     #
     # Goal is untargeted classification
     #
     goal_function = UntargetedClassification(model)
     #
-    # Perform word substitution with a genetic algorithm.
+    # Perform word substitution with an improved genetic algorithm.
+    # Fix the hyperparameter values to S = 60, M = 20, λ = 5."
     #
     search_method = GeneticAlgorithm(
-        pop_size=60, max_iters=20, post_crossover_check=False
+        pop_size=60,
+        max_iters=20,
+        improved_genetic_algorithm=True,
+        max_replace_times_per_index=5,
+        post_crossover_check=False,
     )
 
     return Attack(goal_function, constraints, transformation, search_method)
