@@ -230,8 +230,6 @@ def recover_word_case(word, reference_word):
         # if other, just do not alter the word's case
         return word
 
+
 def check_if_subword(text):
-    if "##" in text:
-        return True
-    else:
-        return False
+    return True if "##" in text else False
