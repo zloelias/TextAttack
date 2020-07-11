@@ -49,6 +49,7 @@ class ParticleSwarmOptimization(SearchMethod):
         return x_cur.replace_word_at_index(rand_idx, w_list[rand_idx])
 
     def _gen_h_score(self, x, neighbors_len, neighbors_list):
+
         w_list = []
         prob_list = []
         for i, orig_w in enumerate(x.words):
@@ -67,12 +68,21 @@ class ParticleSwarmOptimization(SearchMethod):
         return h_score, w_list
 
     def _norm(self, n):
-        n = [max(0, i) for i in n]
-        s = sum(n)
+
+        tn = []
+        for i in n:
+            if i <= 0:
+                tn.append(0)
+            else:
+                tn.append(i)
+        s = np.sum(tn)
         if s == 0:
-            return [1 / len(n) for _ in n]
-        else:
-            return [i / s for i in n]
+            for i in range(len(tn)):
+                tn[i] = 1
+            return [t / len(tn) for t in tn]
+        new_n = [t / s for t in tn]
+
+        return new_n
 
     # for un-targeted attacking
     def _gen_most_change(self, x_cur, pos, replace_list):
