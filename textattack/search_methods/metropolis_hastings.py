@@ -25,15 +25,15 @@ class MetropolisHastingsSampling(SearchMethod):
     Based off paper "Generating Fluent Adversarial Examples for Natural Langauges" by Zhang, Zhou, Miao, Li (2019)
 
     Args:
-        max_iter (int): The maximum number of sampling to perform. 
-            If the word count of the text under attack is greater than `max_iter`, we replace max_iter with word count for that specific example.
+        max_iters (int): The maximum number of sampling to perform. 
+            If the word count of the text under attack is greater than `max_iters`, we replace max_iters with word count for that specific example.
             This is so we at least try to perturb every word once. 
         lm_type (str): The language model to use to estimate likelihood of text.
-            Currently supported LM is "gpt2"
+            Currenwtly supported LM is "gpt2"
     """
 
-    def __init__(self, max_iter=50, pop_size=20, lm_type="gpt2"):
-        self.max_iter = max_iter
+    def __init__(self, max_iters=50, pop_size=20, lm_type="gpt2"):
+        self.max_iters = max_iters
         self.pop_size = pop_size
         self.lm_type = lm_type
 
@@ -142,7 +142,7 @@ class MetropolisHastingsSampling(SearchMethod):
 
     def _perform_search(self, initial_result):
         text_len = len(initial_result.attacked_text.words)
-        max_iter = max(self.max_iter, text_len)
+        max_iters = max(self.max_iters, text_len)
 
         # target_score = LM(initial_text) * p(y_c | x_orig)
         initial_target_score = (
@@ -151,7 +151,7 @@ class MetropolisHastingsSampling(SearchMethod):
         initial_pop_member = PopulationMember(initial_result, initial_target_score)
         population = [copy.deepcopy(initial_pop_member) for _ in range(self.pop_size)]
 
-        for _ in range(max_iter):
+        for _ in range(max_iters):
             for k in range(len(population)):
                 modifiable_indices = (
                     set(range(text_len))
@@ -232,7 +232,7 @@ class MetropolisHastingsSampling(SearchMethod):
         return population[0].result
 
     def extra_repr_keys(self):
-        return ["max_iter", "pop_size", "lm_type"]
+        return ["max_iters", "pop_size", "lm_type"]
 
 
 class OldMetropolisHastingsSampling(SearchMethod):
@@ -240,15 +240,15 @@ class OldMetropolisHastingsSampling(SearchMethod):
     Uses Metropolis-Hastings Sampling to generate adversarial samples.
     Based off paper "Generating Fluent Adversarial Examples for Natural Langauges" by Zhang, Zhou, Miao, Li (2019)
     Args:
-        max_iter (int): The maximum number of sampling to perform. 
-            If the word count of the text under attack is greater than `max_iter`, we replace max_iter with word count for that specific example.
+        max_iters (int): The maximum number of sampling to perform. 
+            If the word count of the text under attack is greater than `max_iters`, we replace max_iters with word count for that specific example.
             This is so we at least try to perturb every word once. 
         lm_type (str): The language model to use to estimate likelihood of text.
             Currently supported LM is "gpt-2"
     """
 
-    def __init__(self, max_iter=200, lm_type="gpt2"):
-        self.max_iter = max_iter
+    def __init__(self, max_iters=200, lm_type="gpt2"):
+        self.max_iters = max_iters
         self.lm_type = lm_type
 
         self._search_over = False
@@ -366,7 +366,7 @@ class OldMetropolisHastingsSampling(SearchMethod):
 
     def _perform_search(self, initial_result):
         num_words = len(initial_result.attacked_text.words)
-        max_iter = max(self.max_iter, text_len)
+        max_iters = max(self.max_iters, text_len)
 
         current_result = initial_result
         current_text = initial_result.attacked_text
@@ -374,7 +374,7 @@ class OldMetropolisHastingsSampling(SearchMethod):
             self._lm_score(initial_result.attacked_text.text) * initial_result.score
         )
 
-        for t in range(max_iter):
+        for t in range(max_iters):
             # i-th word we want to transform
             i = n % num_words
 
