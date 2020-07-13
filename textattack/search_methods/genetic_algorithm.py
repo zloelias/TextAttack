@@ -27,7 +27,7 @@ class GeneticAlgorithm(SearchMethod):
         post_crossover_check (bool): If True, check if child produced from crossover step passes the constraints.
         max_crossover_retries (int): Maximum number of crossover retries if resulting child fails to pass the constraints.
             Applied only when `post_crossover_check` is set to `True`.
-            Setting it to 0 means we immediately take one of the parents at random as the child.
+            Setting it to 0 means we immediately take one of the parents at random as the child upon failure.
         improved_genetic_algorithm (bool): If True, we use the improved genetic algorithm.
         max_replace_times_per_index (int):  The maximum times words at the same index can be replaced in improved genetic algorithm.
     """
@@ -190,15 +190,11 @@ class GeneticAlgorithm(SearchMethod):
         if self.post_crossover_check and not passed_constraints:
             # If we cannot find a child that passes the constraints,
             # we just randomly pick one of the parents to be the child for the next iteration.
-            new_text = (
-                pop_member1.attacked_text
-                if np.random.uniform() < 0.5
-                else pop_member2.attacked_text
-            )
-
-        new_results, self._search_over = self.get_goal_results([new_text])
-
-        return PopulationMember(new_text, num_candidates_per_word, new_results[0])
+            pop_mem = pop_member1 if np.random.uniform() < 0.5 else pop_member2
+            return pop_mem
+        else:
+            new_results, self._search_over = self.get_goal_results([new_text])
+            return PopulationMember(new_text, num_candidates_per_word, new_results[0])
 
     def _initialize_population(self, initial_result):
         """
@@ -322,7 +318,8 @@ class GeneticAlgorithm(SearchMethod):
 
 
 class PopulationMember:
-    """A member of the population during the course of the genetic algorithm.
+    """
+    A member of the population during the course of the genetic algorithm.
 
     Args:
         attacked_text: The ``AttackedText`` of the population member.
