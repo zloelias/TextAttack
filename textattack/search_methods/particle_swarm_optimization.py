@@ -25,10 +25,10 @@ class ParticleSwarmOptimization(SearchMethod):
     probability of the particles ranges from 0.047 (sigmoid(-3)) to 0.953 (sigmoid(3))."
 
     Args:
-        pop_size (:obj:`int`, optional): The population size. Defauls to 60.
+        pop_size (:obj:`int`, optional): The population size. Defaults to 60.
         max_iters (:obj:`int`, optional): The maximum number of iterations to use. Defaults to 20.
-        post_turn_check (bool): If True, check if new position reached by moving passes the constraints.
-        max_turn_retries (int): Maximum number of movement retries if new position after turning fails to pass the constraints.
+        post_turn_check (:obj:`bool`, optional): If `True`, check if new position reached by moving passes the constraints. Defaults to `True`
+        max_turn_retries (:obj:`bool`, optional): Maximum number of movement retries if new position after turning fails to pass the constraints.
             Applied only when `post_movement_check` is set to `True`.
             Setting it to 0 means we immediately take the old position as the new position upon failure.
     """
@@ -349,7 +349,7 @@ class Position:
     Each position represents transformed version of original text
     Args:
         attacked_text (:obj:`AttackedText`): `AttackedText` for the transformed text
-        result (:obs:`GoalFunctionResult`, optional): `GoalFunctionResult` for the transformed text
+        result (:obj:`GoalFunctionResult`, optional): `GoalFunctionResult` for the transformed text
     """
 
     def __init__(self, attacked_text, result=None):
