@@ -86,9 +86,13 @@ class Attack:
         )
         self.search_method.filter_transformations = self.filter_transformations
 
-    def clear_cache(self):
+    def clear_cache(self, recursive=True):
         self.constraints_cache.clear()
-        self.goal_function.clear_cache()
+        if recursive:
+            self.goal_function.clear_cache()
+            for constraint in self.constraints:
+                if hasattr(constraint, "clear_cache"):
+                    constraint.clear_cache()
 
     def get_transformations(self, current_text, original_text=None, **kwargs):
         """Applies ``self.transformation`` to ``text``, then filters the list
