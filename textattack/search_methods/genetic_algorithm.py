@@ -318,8 +318,7 @@ class GeneticAlgorithm(SearchMethod):
 
 
 class PopulationMember:
-    """
-    A member of the population during the course of the genetic algorithm.
+    """A member of the population during the course of the genetic algorithm.
 
     Args:
         attacked_text: The ``AttackedText`` of the population member.

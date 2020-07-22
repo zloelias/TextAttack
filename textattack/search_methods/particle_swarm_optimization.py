@@ -126,9 +126,9 @@ class ParticleSwarmOptimization(SearchMethod):
             return Position(new_text)
 
     def _get_best_neighbors(self, neighbors_list, current_position):
-        """
-        For given `current_position`, find the neighboring position that yields
-        maximum improvement (in goal function score) for each word.
+        """For given `current_position`, find the neighboring position that
+        yields maximum improvement (in goal function score) for each word.
+
         Args:
             neighbors_list (list[list[AttackedText]]): List of "neighboring" AttackedText for each word in `current_text`.
             current_position (Position): Current position
@@ -165,8 +165,9 @@ class ParticleSwarmOptimization(SearchMethod):
         return best_neighbors, prob_list
 
     def _get_neighbors_list(self, current_text, original_text):
-        """
-        For each word in `current_text`, find list of available transformations.
+        """For each word in `current_text`, find list of available
+        transformations.
+
         Args:
             current_text (AttackedText): Current text
             original_text (AttackedText): Original text for constraint check
@@ -344,8 +345,8 @@ class ParticleSwarmOptimization(SearchMethod):
 
 
 class Position:
-    """
-    Helper class for particle-swarm optimization.
+    """Helper class for particle-swarm optimization.
+
     Each position represents transformed version of original text
     Args:
         attacked_text (:obj:`AttackedText`): `AttackedText` for the transformed text

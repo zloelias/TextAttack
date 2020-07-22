@@ -20,14 +20,14 @@ class PopulationMember:
 
 
 class MetropolisHastingsSampling(SearchMethod):
-    """ 
-    Uses Metropolis-Hastings Sampling to generate adversarial samples.
-    Based off paper "Generating Fluent Adversarial Examples for Natural Langauges" by Zhang, Zhou, Miao, Li (2019)
+    """Uses Metropolis-Hastings Sampling to generate adversarial samples. Based
+    off paper "Generating Fluent Adversarial Examples for Natural Langauges" by
+    Zhang, Zhou, Miao, Li (2019)
 
     Args:
-        max_iters (int): The maximum number of sampling to perform. 
+        max_iters (int): The maximum number of sampling to perform.
             If the word count of the text under attack is greater than `max_iters`, we replace max_iters with word count for that specific example.
-            This is so we at least try to perturb every word once. 
+            This is so we at least try to perturb every word once.
         lm_type (str): The language model to use to estimate likelihood of text.
             Currenwtly supported LM is "gpt2"
     """
@@ -126,8 +126,8 @@ class MetropolisHastingsSampling(SearchMethod):
         return (1 / perplexities).tolist()
 
     def _batch_target_prob(self, x_list):
-        """
-        Calculates unnormalized estimation of target_prob(x) in batch
+        """Calculates unnormalized estimation of target_prob(x) in batch.
+
         target_prob(x) = lm_score(x) * prob_model(wrong|x)
         Args:
             attacked_text_list (list[AttackedText]): list of text we want to calculated probability of
@@ -141,8 +141,8 @@ class MetropolisHastingsSampling(SearchMethod):
         return scores, goal_results
 
     def _perform_search(self, initial_result):
-        text_len = len(initial_result.attacked_text.words)
-        max_iters = max(self.max_iters, text_len)
+        num_words = len(initial_result.attacked_text.words)
+        max_iters = max(self.max_iters, num_words)
 
         # target_score = LM(initial_text) * p(y_c | x_orig)
         initial_target_score = (
@@ -154,7 +154,7 @@ class MetropolisHastingsSampling(SearchMethod):
         for _ in range(max_iters):
             for k in range(len(population)):
                 modifiable_indices = (
-                    set(range(text_len))
+                    set(range(num_words))
                     - population[k].result.attacked_text.attack_attrs[
                         "modified_indices"
                     ]
@@ -188,7 +188,7 @@ class MetropolisHastingsSampling(SearchMethod):
                 let f(x) be value proportional to target distribution p(x)
                 and g(x'|x) be transition probability from x to x'.
                 Then, acceptance ratio = min(1, (f(x')*g(x|x')) / (f(x) * g(x'|x)))
-                f(x) = LM(x) * C(y=t|x) and g(x'|x) is simply 1. 
+                f(x) = LM(x) * C(y=t|x) and g(x'|x) is simply 1.
                 """
                 candidates = list(range(len(transformations)))
                 while candidates:
@@ -236,13 +236,13 @@ class MetropolisHastingsSampling(SearchMethod):
 
 
 class OldMetropolisHastingsSampling(SearchMethod):
-    """ 
-    Uses Metropolis-Hastings Sampling to generate adversarial samples.
+    """Uses Metropolis-Hastings Sampling to generate adversarial samples.
+
     Based off paper "Generating Fluent Adversarial Examples for Natural Langauges" by Zhang, Zhou, Miao, Li (2019)
     Args:
-        max_iters (int): The maximum number of sampling to perform. 
+        max_iters (int): The maximum number of sampling to perform.
             If the word count of the text under attack is greater than `max_iters`, we replace max_iters with word count for that specific example.
-            This is so we at least try to perturb every word once. 
+            This is so we at least try to perturb every word once.
         lm_type (str): The language model to use to estimate likelihood of text.
             Currently supported LM is "gpt-2"
     """
@@ -340,8 +340,8 @@ class OldMetropolisHastingsSampling(SearchMethod):
         return (1 / perplexities).tolist()
 
     def _batch_target_prob(self, x_list):
-        """
-        Calculates unnormalized estimation of target_prob(x) in batch
+        """Calculates unnormalized estimation of target_prob(x) in batch.
+
         target_prob(x) = lm_score(x) * prob_model(wrong|x)
         Args:
             attacked_text_list (list[AttackedText]): list of text we want to calculated probability of
@@ -355,9 +355,8 @@ class OldMetropolisHastingsSampling(SearchMethod):
         return scores, model_results
 
     def _normalize(self, values):
-        """
-        Take list of values and normalize it into a probability distribution
-        """
+        """Take list of values and normalize it into a probability
+        distribution."""
         s = sum(values)
         if s == 0:
             return [1 / len(values) for v in values]
@@ -366,7 +365,7 @@ class OldMetropolisHastingsSampling(SearchMethod):
 
     def _perform_search(self, initial_result):
         num_words = len(initial_result.attacked_text.words)
-        max_iters = max(self.max_iters, text_len)
+        max_iters = max(self.max_iters, num_words)
 
         current_result = initial_result
         current_text = initial_result.attacked_text
@@ -376,7 +375,7 @@ class OldMetropolisHastingsSampling(SearchMethod):
 
         for t in range(max_iters):
             # i-th word we want to transform
-            i = n % num_words
+            i = t % num_words
 
             transformations = self.get_transformations(
                 current_text,

@@ -119,6 +119,10 @@ class GoalFunction(ABC):
             return GoalFunctionResultStatus.SUCCEEDED
         return GoalFunctionResultStatus.SEARCHING
 
+    def clear_cache(self):
+        if self.use_cache:
+            self._call_model_cache.clear()
+
     @abstractmethod
     def _is_goal_complete(self, model_output, attacked_text):
         raise NotImplementedError()

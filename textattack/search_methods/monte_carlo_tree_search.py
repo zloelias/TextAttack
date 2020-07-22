@@ -47,16 +47,16 @@ class Node:
 
 
 class SearchTree:
-    """
-        Tree used to hold states/variables for MCTS.
-        Each node represents a particular TokenizedText that reflects certain transformation.
-        Each action is represented as tuple of (int, str) where int is the i-th word chosen for transformation
-        and str is the specific word that i-th word is transformed to.
+    """Tree used to hold states/variables for MCTS. Each node represents a
+    particular TokenizedText that reflects certain transformation. Each action
+    is represented as tuple of (int, str) where int is the i-th word chosen for
+    transformation and str is the specific word that i-th word is transformed
+    to.
 
-        root (Node): root of search tree
-        original_text (TokenizedText): TokenizedText that is under attack
-        original_label (int): Original label of the sample under attack.
-        max_depth (int): max depth of search tree
+    root (Node): root of search tree original_text (TokenizedText):
+    TokenizedText that is under attack original_label (int): Original
+    label of the sample under attack. max_depth (int): max depth of
+    search tree
     """
 
     NOOP_ACTION = (-1, "<noop>")
@@ -90,11 +90,12 @@ class SearchTree:
 
 
 class MonteCarloTreeSearch(SearchMethod):
-    """ 
-    Uses Monte Carlo Tree Search (MCTS) to attempt to find the most important words in an input.
+    """Uses Monte Carlo Tree Search (MCTS) to attempt to find the most
+    important words in an input.
+
     Args:
         model: A PyTorch or TensorFlow model to attack.
-        transformation: The type of transformation to use. Should be a subclass of WordSwap. 
+        transformation: The type of transformation to use. Should be a subclass of WordSwap.
         constraints: A list of constraints to add to the attack
         num_rollouts (int): Number of rollouts for MCTS.
         selection_policy (str): Name of the policy function to use for selection
@@ -130,9 +131,9 @@ class MonteCarloTreeSearch(SearchMethod):
         self._selection_policy = getattr(self, "_" + selection_policy)
 
     def _backprop(self, current_node, search_value):
-        """
-        Update score statistics for each node, starting from last leaf node of search iteration
-            and ending at the root.
+        """Update score statistics for each node, starting from last leaf node
+        of search iteration and ending at the root.
+
         Also update global RAVE values. No return value.
         """
 
@@ -169,8 +170,9 @@ class MonteCarloTreeSearch(SearchMethod):
             current_node = current_node.parent
 
     def _expansion(self, current_node):
-        """
-        Create next nodes based on available transformations and then take a random action.
+        """Create next nodes based on available transformations and then take a
+        random action.
+
         Returns: New node that we expand to. If no such node exists, return None
         """
         available_transformations = []
@@ -271,36 +273,11 @@ class MonteCarloTreeSearch(SearchMethod):
 
         return (1 - beta) * node.children[action].value + beta * global_rave + ucb
 
-    def _UCB_G_RAVE_tuned(self, node, action):
-        ucb = math.sqrt(
-            self.ucb_C
-            * math.log(node.num_visits)
-            / max(1, node.children[action].num_visits)
-            * min(
-                0.25,
-                node.children[action].variance
-                + math.sqrt(
-                    2
-                    * math.log(node.num_visits)
-                    / max(1, node.children[action].num_visits)
-                ),
-            )
-        )
-
-        global_rave = 0.0
-        beta = 0.0
-        if action in self.search_tree.global_rave_values:
-            global_rave = self.search_tree.global_rave_values[action][0]
-            beta = self.global_RAVE_C / (
-                self.global_RAVE_C + self.search_tree.global_rave_values[action][1]
-            )
-
-        return (1 - beta) * node.children[action].value + beta * global_rave + ucb
-
     def _selection(self):
-        """
-        Select the best next node according to UCB function. Finish when node is a leaf
-        Returns last node of selection process.
+        """Select the best next node according to UCB function.
+
+        Finish when node is a leaf Returns last node of selection
+        process.
         """
 
         current_node = self.search_tree.root
@@ -326,8 +303,8 @@ class MonteCarloTreeSearch(SearchMethod):
         return current_node
 
     def _run_mcts(self, num_rollouts):
-        """
-        Runs Monte Carlo Tree Search at the current root.
+        """Runs Monte Carlo Tree Search at the current root.
+
         Returns best node and best action.
         """
 
@@ -352,9 +329,7 @@ class MonteCarloTreeSearch(SearchMethod):
             self._backprop(current_node, search_value)
 
     def _choose_best_move(self, node):
-        """
-        Select the best move using statistics from search tree
-        """
+        """Select the best move using statistics from search tree."""
         best_action = None
         best_value = float("-inf")
         for action in node.children:
