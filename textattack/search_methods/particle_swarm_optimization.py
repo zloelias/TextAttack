@@ -5,17 +5,17 @@ al
 `<https://www.aclweb.org/anthology/2020.acl-main.540.pdf>`_
 `<https://github.com/thunlp/SememePSO-Attack>`_
 """
-
-from copy import deepcopy
+import copy
 
 import numpy as np
 
 from textattack.goal_function_results import GoalFunctionResultStatus
-from textattack.search_methods import SearchMethod
+from textattack.search_methods import PopulationBasedSearch, PopulationMember
+from textattack.shared import utils
 from textattack.shared.validators import transformation_consists_of_word_swaps
 
 
-class ParticleSwarmOptimization(SearchMethod):
+class ParticleSwarmOptimization(PopulationBasedSearch):
     """Attacks a model with word substiutitions using a Particle Swarm
     Optimization (PSO) algorithm. Some key hyper-parameters are setup according
     to the original paper:
@@ -44,45 +44,54 @@ class ParticleSwarmOptimization(SearchMethod):
         self._search_over = False
         self.omega_1 = 0.8
         self.omega_2 = 0.2
-        self.C1_origin = 0.8
-        self.C2_origin = 0.2
-        self.V_max = 3.0
+        self.c1_origin = 0.8
+        self.c2_origin = 0.2
+        self.v_max = 3.0
 
-    def _norm(self, n):
-        n = [max(0, i) for i in n]
-        s = sum(n)
-        if s == 0:
-            return [1 / len(n) for _ in n]
+    def _perturb(self, pop_member, original_result):
+        """Perturb `pop_member` in-place.
+
+        Replaces a word at a random in `pop_member` with replacement word that maximizes increase in score.
+        Args:
+            pop_member (PopulationMember): The population member being perturbed.
+            original_result (GoalFunctionResult): Result of original sample being attacked
+        Returns:
+            `True` if perturbation occured. `False` if not.
+        """
+        # TODO: Below is very slow and is the main cause behind memory build up + slowness
+        best_neighbors, prob_list = self._get_best_neighbors(
+            pop_member.result, original_result
+        )
+        random_result = np.random.choice(best_neighbors, 1, p=prob_list)[0]
+
+        if random_result == pop_member.result:
+            return False
         else:
-            return [i / s for i in n]
+            pop_member.attacked_text = random_result.attacked_text
+            pop_member.result = random_result
+            return True
 
     def _equal(self, a, b):
-        return -self.V_max if a == b else self.V_max
+        return -self.v_max if a == b else self.v_max
 
-    def _count_change_ratio(self, x1, x2):
-        return float(np.sum(x1.words != x2.words)) / float(len(x2.words))
-
-    def _sigmoid(self, n):
-        return 1 / (1 + np.exp(-n))
-
-    def _turn(self, source_x, target_x, prob, original_text):
+    def _turn(self, source_text, target_text, prob, original_text):
         """
-        Based on given probability distribution, "move" to `target_x` from `source_x`
+        Based on given probabilities, "move" to `target_text` from `source_text`
         Args:
-            source_x (Position): Text we start from.
-            target_x (Position): Text we want to move to.
-            prob (list[float]): Turn probability for each word.
+            source_text (PopulationMember): Text we start from.
+            target_text (PopulationMember): Text we want to move to.
+            prob (np.array[float]): Turn probability for each word.
             original_text (AttackedText): Original text for constraint check if `self.post_turn_check=True`.
         Returns:
-            New `Position` that we moved to (or if we fail to move, same as `source_x`)
+            New `Position` that we moved to (or if we fail to move, same as `source_text`)
         """
-        assert len(source_x.words) == len(
-            target_x.words
+        assert len(source_text.words) == len(
+            target_text.words
         ), "Word length mismatch for turn operation."
-        assert len(source_x.words) == len(
+        assert len(source_text.words) == len(
             prob
-        ), "Length mistmatch for words and probability list."
-        len_x = len(source_x.words)
+        ), "Length mismatch for words and probability list."
+        len_x = len(source_text.words)
 
         num_tries = 0
         passed_constraints = False
@@ -92,138 +101,120 @@ class ParticleSwarmOptimization(SearchMethod):
             for i in range(len_x):
                 if np.random.uniform() < prob[i]:
                     indices_to_replace.append(i)
-                    words_to_replace.append(target_x.words[i])
-            new_text = source_x.attacked_text.replace_words_at_indices(
+                    words_to_replace.append(target_text.words[i])
+            new_text = source_text.attacked_text.replace_words_at_indices(
                 indices_to_replace, words_to_replace
             )
+            indices_to_replace = set(indices_to_replace)
+            new_text.attack_attrs["modified_indices"] = (
+                source_text.attacked_text.attack_attrs["modified_indices"]
+                - indices_to_replace
+            ) | (
+                target_text.attacked_text.attack_attrs["modified_indices"]
+                & indices_to_replace
+            )
 
-            if not self.post_turn_check or (new_text.words == source_x.words):
+            if not self.post_turn_check or (new_text.words == source_text.words):
                 break
 
-            if "last_transformation" in source_x.attacked_text.attack_attrs:
-                new_text.attack_attrs[
-                    "last_transformation"
-                ] = source_x.attacked_text.attack_attrs["last_transformation"]
-                filtered = self.filter_transformations(
-                    [new_text], source_x.attacked_text, original_text=original_text
+            if "last_transformation" in source_text.attacked_text.attack_attrs:
+                passed_constraints = self._check_constraints(
+                    new_text, source_text, original_text=original_text
                 )
             else:
-                # In this case, source_x has not been transformed,
-                # meaning that new_text = source_x = original_text
-                filtered = [new_text]
-
-            if filtered:
-                new_text = filtered[0]
                 passed_constraints = True
+
+            if passed_constraints:
                 break
 
             num_tries += 1
 
         if self.post_turn_check and not passed_constraints:
             # If we cannot find a turn that passes the constraints, we do not move.
-            return source_x
+            return source_text
         else:
-            return Position(new_text)
+            return PopulationMember(new_text)
 
-    def _get_best_neighbors(self, neighbors_list, current_position):
-        """For given `current_position`, find the neighboring position that
-        yields maximum improvement (in goal function score) for each word.
+    def _get_best_neighbors(self, current_result, original_result):
+        """For given current text, find its neighboring texts that yields
+        maximum improvement (in goal function score) for each word.
 
         Args:
-            neighbors_list (list[list[AttackedText]]): List of "neighboring" AttackedText for each word in `current_text`.
-            current_position (Position): Current position
+            current_result (GoalFunctionResult): `GoalFunctionResult` of current text
+            original_result (GoalFunctionResult): `GoalFunctionResult` of original text.
         Returns:
-            best_neighbors (list[Position]): Best neighboring positions for each word
+            best_neighbors (list[GoalFunctionResult]): Best neighboring text for each word
             prob_list (list[float]): discrete probablity distribution for sampling a neighbor from `best_neighbors`
         """
+        current_text = current_result.attacked_text
+        neighbors_list = [[] for _ in range(len(current_text.words))]
+        transformed_texts = self.get_transformations(
+            current_text, original_text=original_result.attacked_text
+        )
+        for transformed_text in transformed_texts:
+            diff_idx = next(
+                iter(transformed_text.attack_attrs["newly_modified_indices"])
+            )
+            neighbors_list[diff_idx].append(transformed_text)
+
         best_neighbors = []
         score_list = []
         for i in range(len(neighbors_list)):
             if not neighbors_list[i]:
-                best_neighbors.append(current_position)
+                best_neighbors.append(current_result)
                 score_list.append(0)
                 continue
 
             neighbor_results, self._search_over = self.get_goal_results(
                 neighbors_list[i]
             )
-            if neighbor_results:
-                # This is incase query budget forces len(neighbor_results) == 0
+            if not len(neighbor_results):
+                best_neighbors.append(current_result)
+                score_list.append(0)
+            else:
                 neighbor_scores = np.array([r.score for r in neighbor_results])
-                score_diff = neighbor_scores - current_position.score
+                score_diff = neighbor_scores - current_result.score
                 best_idx = np.argmax(neighbor_scores)
-                best_neighbors.append(
-                    Position(neighbors_list[i][best_idx], neighbor_results[best_idx])
-                )
+                best_neighbors.append(neighbor_results[best_idx])
                 score_list.append(score_diff[best_idx])
 
-            if self._search_over:
-                break
-
-        prob_list = self._norm(score_list)
+        prob_list = normalize(score_list)
 
         return best_neighbors, prob_list
 
-    def _get_neighbors_list(self, current_text, original_text):
-        """For each word in `current_text`, find list of available
-        transformations.
-
+    def _initialize_population(self, initial_result, pop_size):
+        """
+        Initialize a population of size `pop_size` with `initial_result`
         Args:
-            current_text (AttackedText): Current text
-            original_text (AttackedText): Original text for constraint check
+            initial_result (GoalFunctionResult): Original text
+            pop_size (int): size of population
         Returns:
-            `list[list[AttackedText]]` representing list of candidate neighbors for each word
+            population as `list[PopulationMember]`
         """
-        neighbors_list = [[] for _ in range(len(current_text.words))]
-        transformations = self.get_transformations(
-            current_text, original_text=original_text
-        )
-        for transformed_text in transformations:
-            diff_idx = next(
-                iter(transformed_text.attack_attrs["newly_modified_indices"])
-            )
-            neighbors_list[diff_idx].append(transformed_text)
-
-        return neighbors_list
-
-    def _mutate(self, current_position, original_text):
-        neighbors_list = self._get_neighbors_list(
-            current_position.attacked_text, original_text
-        )
-        candidate_list, prob_list = self._get_best_neighbors(
-            neighbors_list, current_position
-        )
-        if self._search_over:
-            return current_position
-        random_candidate = np.random.choice(candidate_list, 1, p=prob_list)[0]
-        return random_candidate
-
-    def _generate_population(self, initial_position):
-        """
-        Generate population of particles (represented by `Position`) from `initial_position`
-        Args:
-            initial_position (Position): Original text represented as `Position`
-        Returns:
-            `list[Position]` representing population
-        """
-        neighbors_list = self._get_neighbors_list(
-            initial_position.attacked_text, initial_position.attacked_text
-        )
         best_neighbors, prob_list = self._get_best_neighbors(
-            neighbors_list, initial_position
+            initial_result, initial_result
         )
         population = []
-        for _ in range(self.pop_size):
+        for _ in range(pop_size):
             # Mutation step
-            random_position = np.random.choice(best_neighbors, 1, p=prob_list)[0]
-            population.append(random_position)
+            random_result = np.random.choice(best_neighbors, 1, p=prob_list)[0]
+            population.append(
+                PopulationMember(random_result.attacked_text, random_result)
+            )
         return population
 
     def _perform_search(self, initial_result):
         self._search_over = False
-        original_position = Position(initial_result.attacked_text, initial_result)
-        # get word substitute candidates and generate population
-        population = self._generate_population(original_position)
+        population = self._initialize_population(initial_result, self.pop_size)
+        # Initialize  up velocities of each word for each population
+        v_init = np.random.uniform(-self.v_max, self.v_max, self.pop_size)
+        velocities = np.array(
+            [
+                [v_init[t] for _ in range(initial_result.attacked_text.num_words)]
+                for t in range(self.pop_size)
+            ]
+        )
+
         global_elite = max(population, key=lambda x: x.score)
         if (
             self._search_over
@@ -231,40 +222,32 @@ class ParticleSwarmOptimization(SearchMethod):
         ):
             return global_elite.result
 
-        # rank the scores from low to high and check if there is a successful attack
-        local_elites = deepcopy(population)
-        # set up hyper-parameters
-        V = np.random.uniform(-self.V_max, self.V_max, self.pop_size)
-        V_P = [
-            [V[t] for _ in range(len(initial_result.attacked_text.words))]
-            for t in range(self.pop_size)
-        ]
+        local_elites = copy.copy(population)
 
         # start iterations
         for i in range(self.max_iters):
             omega = (self.omega_1 - self.omega_2) * (
                 self.max_iters - i
             ) / self.max_iters + self.omega_2
-            C1 = self.C1_origin - i / self.max_iters * (self.C1_origin - self.C2_origin)
-            C2 = self.C2_origin + i / self.max_iters * (self.C1_origin - self.C2_origin)
+            C1 = self.c1_origin - i / self.max_iters * (self.c1_origin - self.c2_origin)
+            C2 = self.c2_origin + i / self.max_iters * (self.c1_origin - self.c2_origin)
             P1 = C1
             P2 = C2
 
             for k in range(len(population)):
                 # calculate the probability of turning each word
-                particle_words = population[k].words
+                pop_mem_words = population[k].words
                 local_elite_words = local_elites[k].words
-                assert len(particle_words) == len(
+                assert len(pop_mem_words) == len(
                     local_elite_words
                 ), "PSO word length mismatch!"
-                for dim in range(len(particle_words)):
-                    V_P[k][dim] = omega * V_P[k][dim] + (1 - omega) * (
-                        self._equal(particle_words[dim], local_elite_words[dim])
-                        + self._equal(particle_words[dim], local_elite_words[dim])
+
+                for d in range(len(pop_mem_words)):
+                    velocities[k][d] = omega * velocities[k][d] + (1 - omega) * (
+                        self._equal(pop_mem_words[d], local_elite_words[d])
+                        + self._equal(pop_mem_words[d], global_elite.words[d])
                     )
-                turn_prob = [
-                    self._sigmoid(V_P[k][d]) for d in range(len(particle_words))
-                ]
+                turn_prob = utils.sigmoid(velocities[k])
 
                 if np.random.uniform() < P1:
                     # Move towards local elite
@@ -288,7 +271,8 @@ class ParticleSwarmOptimization(SearchMethod):
             pop_results, self._search_over = self.get_goal_results(
                 [p.attacked_text for p in population]
             )
-            for k in range(len(population)):
+
+            for k in range(len(pop_results)):
                 population[k].result = pop_results[k]
             top_result = max(population, key=lambda x: x.score).result
             if (
@@ -299,39 +283,32 @@ class ParticleSwarmOptimization(SearchMethod):
 
             # Mutation based on the current change rate
             for k in range(len(population)):
-                p = population[k]
-                change_ratio = self._count_change_ratio(p, initial_result.attacked_text)
+                change_ratio = initial_result.attacked_text.words_diff_ratio(
+                    population[k].attacked_text
+                )
                 # Referred from the original source code
                 p_change = 1 - 2 * change_ratio
                 if np.random.uniform() < p_change:
-                    population[k] = self._mutate(p, initial_result.attacked_text)
+                    self._perturb(population[k], initial_result)
 
                 if self._search_over:
                     break
-            if self._search_over:
-                return top_result
 
             # Check if there is any successful attack in the current population
-            pop_results, self._search_over = self.get_goal_results(
-                [p.attacked_text for p in population]
-            )
-            for k in range(len(population)):
-                population[k].result = pop_results[k]
-            top_result = max(population, key=lambda x: x.score).result
+            top_result = max(population, key=lambda x: x.score)
             if (
                 self._search_over
-                or top_result.goal_status == GoalFunctionResultStatus.SUCCEEDED
+                or top_result.result.goal_status == GoalFunctionResultStatus.SUCCEEDED
             ):
-                return top_result
+                return top_result.result
 
             # Update the elite if the score is increased
             for k in range(len(population)):
                 if population[k].score > local_elites[k].score:
-                    local_elites[k] = deepcopy(population[k])
+                    local_elites[k] = copy.copy(population[k])
 
             if top_result.score > global_elite.score:
-                elite_result = deepcopy(top_result)
-                global_elite = Position(elite_result.attacked_text, elite_result)
+                global_elite = copy.copy(top_result)
 
         return global_elite.result
 
@@ -344,25 +321,11 @@ class ParticleSwarmOptimization(SearchMethod):
         return ["pop_size", "max_iters", "post_turn_check", "max_turn_retries"]
 
 
-class Position:
-    """Helper class for particle-swarm optimization.
-
-    Each position represents transformed version of original text
-    Args:
-        attacked_text (:obj:`AttackedText`): `AttackedText` for the transformed text
-        result (:obj:`GoalFunctionResult`, optional): `GoalFunctionResult` for the transformed text
-    """
-
-    def __init__(self, attacked_text, result=None):
-        self.attacked_text = attacked_text
-        self.result = result
-
-    @property
-    def score(self):
-        if not self.result:
-            raise ValueError('"result" attribute undefined for Position')
-        return self.result.score
-
-    @property
-    def words(self):
-        return self.attacked_text.words
+def normalize(n):
+    n = np.array(n)
+    n[n < 0] = 0
+    s = np.sum(n)
+    if s == 0:
+        return np.ones(len(n)) / len(n)
+    else:
+        return n / s
