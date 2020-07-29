@@ -172,11 +172,13 @@ class Checkpoint:
     def datetime(self):
         return datetime.datetime.fromtimestamp(self.time).strftime("%Y-%m-%d %H:%M:%S")
 
-    def save(self, quiet=False):
-        file_name = "{}.ta.chkpt".format(int(self.time * 1000))
-        if not os.path.exists(self.args.checkpoint_dir):
-            os.makedirs(self.args.checkpoint_dir)
-        path = os.path.join(self.args.checkpoint_dir, file_name)
+    def save(self, path=None, quiet=False):
+        if not path:
+            file_name = "{}.ta.chkpt".format(int(self.time * 1000))
+            if not os.path.exists(self.args.checkpoint_dir):
+                os.makedirs(self.args.checkpoint_dir)
+            path = os.path.join(self.args.checkpoint_dir, file_name)
+
         if not quiet:
             print("\n\n" + "=" * 125)
             logger.info(

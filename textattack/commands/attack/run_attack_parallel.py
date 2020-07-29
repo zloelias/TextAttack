@@ -169,10 +169,10 @@ def run(args, checkpoint=None):
             new_checkpoint.save()
             attack_log_manager.flush()
 
-    new_checkpoint = textattack.shared.Checkpoint(
+    end_checkpoint = textattack.shared.Checkpoint(
         args, attack_log_manager, worklist, worklist_tail
     )
-    new_checkpoint.save()
+    new_checkpoint.save(path=args.end_checkpoint)
     pbar.close()
     print()
     # Enable summary stdout.

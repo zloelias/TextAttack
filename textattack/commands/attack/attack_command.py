@@ -161,6 +161,13 @@ class AttackCommand(TextAttackCommand):
         )
 
         parser.add_argument(
+            "--end-checkpoint",
+            required=False,
+            type=str,
+            help="Path of file for end checkpoint.",
+        )
+
+        parser.add_argument(
             "--query-budget",
             "-q",
             type=int,

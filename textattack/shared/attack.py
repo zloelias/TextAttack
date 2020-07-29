@@ -37,7 +37,7 @@ class Attack:
         constraints=[],
         transformation=None,
         search_method=None,
-        transformation_cache_size=2 ** 20,
+        transformation_cache_size=2 ** 13,
         constraint_cache_size=2 ** 20,
     ):
         """Initialize an attack object.
