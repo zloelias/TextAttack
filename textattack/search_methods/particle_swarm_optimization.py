@@ -283,7 +283,7 @@ class ParticleSwarmOptimization(PopulationBasedSearch):
                 self._search_over
                 or top_result.goal_status == GoalFunctionResultStatus.SUCCEEDED
             ):
-                return top_result
+                return top_result.result
 
             # Mutation based on the current change rate
             for k in range(len(population)):
