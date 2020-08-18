@@ -38,7 +38,7 @@ class Attack:
         transformation=None,
         search_method=None,
         transformation_cache_size=2 ** 13,
-        constraint_cache_size=2 ** 20,
+        constraint_cache_size=2 ** 13,
     ):
         """Initialize an attack object.
 
@@ -85,6 +85,7 @@ class Attack:
                     break
         else:
             self.use_transformation_cache = True
+        self.use_transformation_cache = False
         self.transformation_cache_size = transformation_cache_size
         self.transformation_cache = lru.LRU(transformation_cache_size)
 
