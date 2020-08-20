@@ -100,6 +100,7 @@ class Attack:
             attacked_text_list
         )
         self.search_method.filter_transformations = self.filter_transformations
+        self.total_goal_function_cache_hits = 0
 
     def clear_cache(self, recursive=True):
         self.constraints_cache.clear()
@@ -315,6 +316,8 @@ class Attack:
                 yield SkippedAttackResult(goal_function_result)
             else:
                 result = self.attack_one(goal_function_result)
+                self.total_goal_function_cache_hits += self.goal_function.num_cache_hits
+                self.goal_function.num_cache_hits = 0
                 yield result
 
     def __repr__(self):

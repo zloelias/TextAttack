@@ -41,6 +41,7 @@ class GoalFunction(ABC):
             self._call_model_cache = lru.LRU(model_cache_size)
         else:
             self._call_model_cache = None
+        self.num_cache_hits = 0
 
     def clear_cache(self):
         if self.use_cache:
@@ -174,6 +175,7 @@ class GoalFunction(ABC):
                     # LRU cache and prevents the unlikely event that the text
                     # is overwritten when we store the inputs from `uncached_list`.
                     self._call_model_cache[text] = self._call_model_cache[text]
+                    self.num_cache_hits += 1
                 else:
                     uncached_list.append(text)
             uncached_list = [

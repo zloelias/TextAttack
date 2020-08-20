@@ -142,7 +142,7 @@ def run(args, checkpoint=None):
                 )
                 new_checkpoint.save()
                 attack_log_manager.flush()
-
+        print(f"Avg cache hits: {attack.total_goal_function_cache_hits / num_results}")
         pbar.close()
         print()
         # Enable summary stdout

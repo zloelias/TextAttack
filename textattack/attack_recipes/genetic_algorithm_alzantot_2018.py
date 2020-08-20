@@ -72,7 +72,7 @@ class GeneticAlgorithmAlzantot2018(AttackRecipe):
         #
         # Perform word substitution with a genetic algorithm.
         #
-        search_method = GeneticAlgorithm(
+        search_method = AlzantotGeneticAlgorithm(
             pop_size=60, max_iters=20, post_crossover_check=False
         )
 
