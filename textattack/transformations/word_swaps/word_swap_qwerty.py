@@ -115,7 +115,7 @@ class WordSwapQWERTY(WordSwap):
         candidate_words = []
 
         start_idx = 1 if self.skip_first_char else 0
-        end_idx = len(word) - (1 + self.skip_last_char)
+        end_idx = len(word) - (1 + self.skip_last_char) - 1
 
         if start_idx >= end_idx:
             return []
