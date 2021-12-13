@@ -61,6 +61,20 @@ class WordSwapHomoglyphSwap(WordSwap):
             "x": "×",
             "y": "у",
             "z": "ᴢ",
+            "а": "a",
+            "у": "y",
+            "к": "k",
+            "е": "e",
+            "н": "h",
+            "з": "3",
+            "х": "x",
+            "п": "n",
+            "р": "p",
+            "о": "o",
+            "ч": "4",
+            "м": "m",
+            "т": "t",
+            "б": "6",
         }
         self.random_one = random_one
 
